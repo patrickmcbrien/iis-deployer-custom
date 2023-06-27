@@ -81,7 +81,7 @@ function Compile-Noname-Module
     & $frameworkPath /t:library /out:$assemblyName /o $modulePath /r:System.Web.dll
 }
 
-function Copy-Noname-Module-To-Site([string] $physicalPath, [string]$Folders)
+function Copy-Noname-Module-To-Site([string] $physicalPath, [array]$Folders)
 {
     $binDir = Join-Path $physicalPath 'bin'
     if (!(Test-Path $binDir)) {
