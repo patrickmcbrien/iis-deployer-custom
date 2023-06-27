@@ -1,4 +1,5 @@
-param ($siteName,$nonInteractive)
+param ($siteName,$nonInteractive,[Parameter(Mandatory=$true)][string[]]$Folders)
+
 
 function Install-Pre-requisites([string] $nonInteractive)
 {
@@ -80,7 +81,7 @@ function Compile-Noname-Module
     & $frameworkPath /t:library /out:$assemblyName /o $modulePath /r:System.Web.dll
 }
 
-function Copy-Noname-Module-To-Site([string] $physicalPath $Folders)
+function Copy-Noname-Module-To-Site([string] $physicalPath, [string]$Folders)
 {
     $binDir = Join-Path $physicalPath 'bin'
     if (!(Test-Path $binDir)) {
@@ -167,13 +168,5 @@ function Add-Noname-To-IIS-Sites($siteName,$nonInteractive,$Folders)
         Write-Host ("An error occurred.`n" + $_)
     }
 }
-
-param(
-    [Parameter(Mandatory=$true)]
-    [string[]]$Folders,
-    
-    [Parameter(Mandatory=$true)]
-    [string]$SourceDLLPath
-)
 
 Add-Noname-To-IIS-Sites $siteName $nonInteractive $Folders
