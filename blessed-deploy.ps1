@@ -1,4 +1,4 @@
-param ($siteName,$nonInteractive,[Parameter(Mandatory=$true)][string[]]$Folders)
+param ($siteName,$nonInteractive,[Parameter(Mandatory=$false)][string[]]$Folders)
 
 function Install-Pre-requisites([string] $nonInteractive)
 {
