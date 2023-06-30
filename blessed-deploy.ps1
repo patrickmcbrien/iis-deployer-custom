@@ -1,14 +1,9 @@
-param ($siteName,$nonInteractive,[Parameter(Mandatory=$false)][string[]]$Folders) 
+param ([Parameter(Mandatory=$true)]$siteName,[Parameter(Mandatory=$true)]$appName,[Parameter(Mandatory=$true)]$folderName, $nonInteractive) 
 
-#ARGUMENTS ARE OPTIONAL allowing you to target specific folders to copy the DLL into AND/OR specific siteNames to apply Noname to the IIS config
 
-#./deploy.ps1 -siteName pass in an IIS site to target. #CAUTION if no user input for siteName this will add Noname to ALL of the IIS sites
-#./deploy.ps1 -Folders c:\test,c:\webroot\bin
 
-#EXAMPLES  .\deploy.ps1 -Folders c:\Default -siteName "Default Web Site"
-# or .\deploy.ps1 -siteName "Default Web Site" for a singles site IIS config change
-# or .\deploy.ps1 -Folders c:\Default for a singles folder DLL copy and ALL IIS sites config changes
-# or .\deploy.ps1 -Folders c:\Default for a single folder DLL copy with NO IIS site config changes
+#./deploy.ps1 -siteName "My Default Website" -appName "Cats" 
+
 
 #Comes with no warranties
 #Patrick Mcbrien
@@ -54,34 +49,30 @@ function Install-Pre-requisites([string] $nonInteractive)
     }
 }
 
-function Copy-Noname-Module-To-Sites([array]$Folders)
+
+function Add-Noname-Module-Application($site)
 {
-
-    foreach ($folder in $Folders) {
-    
-        $sourcePath = 'C:\Noname\NonameApp.dll'
-        $destinationPath = $folder + '\NonameApp.dll'
-
-        If(!(Test-Path -PathType container $folder))
-        {  
-            New-Item -ItemType Directory -Path $folder
-            Write-Host ("Created a new folder" + $folder)
-        }
-
-        if (Test-Path -Path $folder -PathType Container) {
-            If (Test-Path -Path $destinationPath ) {
-                Write-Host ($destinationPath + " ALREADY exists. Not copying the DLL. `n")
-            }else {
-                Write-Host ("DLL Not found so copying blessed Noname DLL from source path " + $sourcePath + " into the dest Path " + $destinationPath + ". `n")
-                Copy-Item -Path $sourcePath -Destination $destinationPath -Force
-            }
-        } else {
-            Write-Host "Folder '$folder' does not exist or is not accessible."
-
-        }
+    $siteName = $site.Name
+    Write-Host ("Adding noname module locally for site: "+$siteName+".`n")
+    $filteredModules = Get-WebManagedModule -PSPath "IIS:\sites\$siteName" | Where-Object Name -like "*Noname*" # Check if the web-managed-modules contains Noname module for the site
+    if ($filteredModules.Count -gt 0)
+    {
+        # The Noname IIS module is installed
+        Write-Host ($filteredModules.Name + " module is already installed on the site. Skipping Noname module installation on PSPath IIS:\sites\" + $siteName + "`n")
     }
-
+    else
+    {
+        # The Noname IIS module is not installed
+        Write-Host ("Noname module is not installed, so let's install it on PSPath IIS:\sites\" +$siteName+"`n")
+        New-WebManagedModule -Name "NonameCustomModule" -Type "NonameApp.NonameCustomModule" -PSPath "IIS:\sites\$siteName"
+        Write-Host ("Stopping site: '" + $siteName + "'`n")
+        Stop-WebSite -Name $siteName
+        Write-Host ("Starting site: '" + $siteName + "'`n")
+        Start-WebSite -Name $siteName
+        Write-Host ("Restart '" + $siteName + "' done`n")
+    }
 }
+
 
 function Add-Noname-Module-Site($site)
 {
@@ -106,8 +97,10 @@ function Add-Noname-Module-Site($site)
     }
 }
 
-function Add-Noname-To-IIS-Sites($siteName,$nonInteractive,$Folders)
+function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInteractive)
 {
+    
+    
     $ErrorActionPreference = "Stop"
     try
     {
@@ -118,24 +111,75 @@ function Add-Noname-To-IIS-Sites($siteName,$nonInteractive,$Folders)
             $sites = Get-ChildItem IIS:\Sites\ #CAUTION if no user input this will get ALL of the IIS sites
         }
         
+        if ($appName)
+        {
+            $apps= Get-WebApplication -Site $siteName
+        } else{
+            #if no param is passed, then we shall get all apps from IIS
+            $apps = Get-WebApplication
+        }
+        
+        if (-Not $apps) {
+            Write-Host ("Error getting application for IIS Site: '" + $siteName + "'`n")
+        }
+        
         Install-Pre-requisites $nonInteractive
         Write-Host "Prereqs met ...`n"   
-        Copy-Noname-Module-To-Sites $Folders    #First we copy blessed DLL files to Folders if they are passed in
-
-        foreach ($site in $sites) #loop through IIS sites
-        {
-            if ((-Not $siteName) -Or ($site.Name -eq $siteName))
-            {
-                Write-Host ("Processing IIS Site: '" + $site.Name + "'`n")
-                Add-Noname-Module-Site($site) #adds the noname module to the site
+        
+        Write-Host ("Copy the DLL into " + $folderName)
+        
+        $sourcePath = 'C:\Noname\NonameApp.dll'
+        $destinationPath = $folderName + '\NonameApp.dll'
+        
+        If(!(Test-Path -PathType container $folderName))
+        {  
+            New-Item -ItemType Directory -Path $folderName
+            Write-Host ("Created a new folder because it does not exist at " + $folderName)
+        }
+        
+        if (Test-Path -Path $folderName -PathType Container) {
+            If (Test-Path -Path $destinationPath ) {
+                Write-Host ($destinationPath + " folder already exists. Not copying the DLL or installing the IIS module at application level. `n")
+            }else {
+                Write-Host ("DLL Not found so copying blessed Noname DLL from source path " + $sourcePath + " into the dest Path " + $destinationPath + ". `n")
+                Copy-Item -Path $sourcePath -Destination $destinationPath -Force
                 
+                if ($appName) {
+                    Write-Host ("Installing the module into the IIS Application: '" + $siteName + "/" + $appName + "'`n")
+                    $appPath = ($siteName + "/" + $appName).trim() #for example, "My Default Site/Cats"
+                    
+                    C:\windows\system32\inetsrv\appcmd.exe set config $appPath -section:system.webServer/modules /+`"["name='NonameCustomModule',type='NonameApp.NonameCustomModule'"]  
+                    
+                    Write-Host ("Stopping site: '" + $siteName + "'`n")
+                    Stop-WebSite -Name $siteName
+                    Write-Host ("Starting site: '" + $siteName + "'`n")
+                    Start-WebSite -Name $siteName
+                    Write-Host ("Restart '" + $siteName + "' done`n")
+                }
+
+            }
+        } else {
+            Write-Host "Folder '$folder' does not exist or is not accessible."
+            
+        }
+        
+        
+        #foreach ($site in $sites) #loop through IIS sites
+        # {
+            #     if ((-Not $siteName) -Or ($site.Name -eq $siteName))
+            #     {
+                #         Write-Host ("Processing IIS Site: '" + $site.Name + "'`n")
+                #         #Add-Noname-Module-Site($site) #adds the noname module to the site
+                #         $sm = Get-IISServerManager
+                #         $appPool = $sm.ApplicationPools['DefaultAppPool']
+                #     }
+                # }
+            }
+            catch [System.SystemException]
+            {
+                Write-Host ("An error occurred.`n" + $_)
             }
         }
-    }
-    catch [System.SystemException]
-    {
-        Write-Host ("An error occurred.`n" + $_)
-    }
-}
-
-Add-Noname-To-IIS-Sites $siteName $nonInteractive $Folders
+        
+        Add-Noname-To-IIS-Applications $siteName $appName $folderName $nonInteractive
+        
