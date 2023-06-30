@@ -56,54 +56,6 @@ function Install-Pre-requisites([string] $nonInteractive)
     }
 }
 
-
-function Add-Noname-Module-Application($site)
-{
-    $siteName = $site.Name
-    Write-Host ("Adding noname module locally for site: "+$siteName+".`n")
-    $filteredModules = Get-WebManagedModule -PSPath "IIS:\sites\$siteName" | Where-Object Name -like "*Noname*" # Check if the web-managed-modules contains Noname module for the site
-    if ($filteredModules.Count -gt 0)
-    {
-        # The Noname IIS module is installed
-        Write-Host ($filteredModules.Name + " module is already installed on the site. Skipping Noname module installation on PSPath IIS:\sites\" + $siteName + "`n")
-    }
-    else
-    {
-        # The Noname IIS module is not installed
-        Write-Host ("Noname module is not installed, so let's install it on PSPath IIS:\sites\" +$siteName+"`n")
-        New-WebManagedModule -Name "NonameCustomModule" -Type "NonameApp.NonameCustomModule" -PSPath "IIS:\sites\$siteName"
-        Write-Host ("Stopping site: '" + $siteName + "'`n")
-        Stop-WebSite -Name $siteName
-        Write-Host ("Starting site: '" + $siteName + "'`n")
-        Start-WebSite -Name $siteName
-        Write-Host ("Restart '" + $siteName + "' done`n")
-    }
-}
-
-
-function Add-Noname-Module-Site($site)
-{
-    $siteName = $site.Name
-    Write-Host ("Adding noname module locally for site: "+$siteName+".`n")
-    $filteredModules = Get-WebManagedModule -PSPath "IIS:\sites\$siteName" | Where-Object Name -like "*Noname*" # Check if the web-managed-modules contains Noname module for the site
-    if ($filteredModules.Count -gt 0)
-    {
-        # The Noname IIS module is installed
-        Write-Host ($filteredModules.Name + " module is already installed on the site. Skipping Noname module installation on PSPath IIS:\sites\" + $siteName + "`n")
-    }
-    else
-    {
-        # The Noname IIS module is not installed
-        Write-Host ("Noname module is not installed, so let's install it on PSPath IIS:\sites\" +$siteName+"`n")
-        New-WebManagedModule -Name "NonameCustomModule" -Type "NonameApp.NonameCustomModule" -PSPath "IIS:\sites\$siteName"
-        Write-Host ("Stopping site: '" + $siteName + "'`n")
-        Stop-WebSite -Name $siteName
-        Write-Host ("Starting site: '" + $siteName + "'`n")
-        Start-WebSite -Name $siteName
-        Write-Host ("Restart '" + $siteName + "' done`n")
-    }
-}
-
 function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInteractive)
 {
     
@@ -155,7 +107,7 @@ function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInter
                     Write-Host ("Installing the module into the IIS Application: '" + $siteName + "/" + $appName + "'`n")
                     $appPath = ($siteName + "/" + $appName).trim() #for example, "My Default Site/Cats"
                     
-                    $filteredModules = Get-WebManagedModule -Name "NonameCustomModule" -PSPath "IIS:\sites\"+$siteName+ "\" + $appName 
+                    $filteredModules = Get-WebManagedModule -Name "NonameCustomModule" -PSPath "IIS:\sites\$siteName\$appName"
                     if ($filteredModules.Count -gt 0)
                     {
                         Write-Host("Noname already found on application located at " + $appPath)
@@ -173,7 +125,7 @@ function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInter
 
             }
         } else {
-            Write-Host "Folder '$folder' does not exist or is not accessible."
+            Write-Host "Folder '$folderName' does not exist or is not accessible."
             
         }
         
