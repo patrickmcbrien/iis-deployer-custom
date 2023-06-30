@@ -1,4 +1,4 @@
- param ($siteName,$nonInteractive,[Parameter(Mandatory=$true)][string[]]$Folders)
+param ($siteName,$nonInteractive,[Parameter(Mandatory=$true)][string[]]$Folders)
 
 function Install-Pre-requisites([string] $nonInteractive)
 {
@@ -70,10 +70,10 @@ function Copy-Noname-Module-To-Sites([array]$Folders)
 
 }
 
-function Add-Noname-Module-Application($site)
+function Add-Noname-Module-Site($site)
 {
     $siteName = $site.Name
-    Write-Host ("Adding noname module to the application for site: "+$siteName+".`n")
+    Write-Host ("Adding noname module locally for site: "+$siteName+".`n")
     $filteredModules = Get-WebManagedModule -PSPath "IIS:\sites\$siteName" | Where-Object Name -like "*Noname*"
     # Check if the web-managed-modules contains Noname module for the 
     if ($filteredModules.Count -gt 0)
@@ -120,7 +120,7 @@ function Add-Noname-To-IIS-Sites($siteName,$nonInteractive,$Folders)
             if ((-Not $siteName) -Or ($site.Name -eq $siteName))
             {
                 Write-Host ("Processing IIS Site: '" + $site.Name + "'`n")
-                Add-Noname-Module-Application($site)
+                Add-Noname-Module-Site($site)
                 
             }
         }
@@ -132,4 +132,3 @@ function Add-Noname-To-IIS-Sites($siteName,$nonInteractive,$Folders)
 }
 
 Add-Noname-To-IIS-Sites $siteName $nonInteractive $Folders
- 
