@@ -2,7 +2,16 @@ param ([Parameter(Mandatory=$true)]$siteName,[Parameter(Mandatory=$true)]$appNam
 
 #./deploy.ps1 -siteName "Default Web Site" -appName "Cats" -folderName "c:\Brand New Folder"
 
+# Updated version: https://github.com/patrickmcbrien/iis-deployer-custom/blob/main/blessed-deploy.ps1
 
+# This script now installs the Noname module at the application level and not at the site level
+# If the folder passed in does not exist, the script will create the folder
+# If the DLL does not exist in the folder passed to the script, then it will copy the dll into the folder from c:\Noname and then also install the IIS configuration at the application level for the site and app passed
+# If the DLL exists in the folder passed, the script does nothing at all. I could still check the IIS application for the noname module regardless of dll existence but currently the script is not setup for this(easy change if this is desired)
+# The IIS site will be restarted only if the noname module is installed to the iis application
+# Usage: #./blessed-deploy.ps1 -siteName "Default Web Site" -appName "Cats" -folderName "c:\Brand New Folder"
+
+# All three arguments are required and the script does one site/app/folder combination at a time. This should make scripting a list a breeze.
 #Comes with no warranties
 #Patrick Mcbrien
 #Noname
