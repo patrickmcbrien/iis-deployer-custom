@@ -1,8 +1,6 @@
 param ([Parameter(Mandatory=$true)]$siteName,[Parameter(Mandatory=$true)]$appName,[Parameter(Mandatory=$true)]$folderName, $nonInteractive) 
 
-
-
-#./deploy.ps1 -siteName "My Default Website" -appName "Cats" 
+#./deploy.ps1 -siteName "My Default Website" -appName "Cats" -folderName "c:\Brand New Folder"
 
 
 #Comes with no warranties
