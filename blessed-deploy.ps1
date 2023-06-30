@@ -1,6 +1,6 @@
 param ([Parameter(Mandatory=$true)]$siteName,[Parameter(Mandatory=$true)]$appName,[Parameter(Mandatory=$true)]$folderName, $nonInteractive) 
 
-#./deploy.ps1 -siteName "Default Web Site" -appName "Cats" -folderName "c:\Brand New Folder"
+#./blessed-deploy.ps1 -siteName "Default Web Site" -appName "Cats" -folderName "c:\Brand New Folder"
 
 # Updated version: https://github.com/patrickmcbrien/iis-deployer-custom/blob/main/blessed-deploy.ps1
 
