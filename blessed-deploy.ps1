@@ -58,8 +58,6 @@ function Install-Pre-requisites([string] $nonInteractive)
 
 function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInteractive)
 {
-    
-    
     $ErrorActionPreference = "Stop"
     try
     {
@@ -70,22 +68,9 @@ function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInter
             $sites = Get-ChildItem IIS:\Sites\ #CAUTION if no user input this will get ALL of the IIS sites
         }
         
-        if ($appName)
-        {
-            $apps= Get-WebApplication -Site $siteName
-        } else{
-            #if no param is passed, then we shall get all apps from IIS
-            $apps = Get-WebApplication
-        }
-        
-        if (-Not $apps) {
-            Write-Host ("Error getting application for IIS Site: '" + $siteName + "'`n")
-        }
-        
         Install-Pre-requisites $nonInteractive
-        Write-Host "Prereqs met ...`n"   
-        
-        Write-Host ("Copy the DLL into " + $folderName)
+        Write-Host "Prereqs met ..."   
+        Write-Host ("Copying the DLL into " + $folderName)
         
         $sourcePath = 'C:\Noname\NonameApp.dll'
         $destinationPath = $folderName + '\NonameApp.dll'
@@ -129,12 +114,12 @@ function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInter
             
         }
         
-            }
-            catch [System.SystemException]
-            {
-                Write-Host ("An error occurred.`n" + $_)
-            }
-        }
+    }
+    catch [System.SystemException]
+    {
+            Write-Host ("An error occurred.`n" + $_)
+    }
+}
         
         Add-Noname-To-IIS-Applications $siteName $appName $folderName $nonInteractive
         
