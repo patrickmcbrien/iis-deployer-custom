@@ -146,6 +146,12 @@ function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInter
                     Write-Host ("Installing the module into the IIS Application: '" + $siteName + "/" + $appName + "'`n")
                     $appPath = ($siteName + "/" + $appName).trim() #for example, "My Default Site/Cats"
                     
+                    $filteredModules = Get-WebManagedModule -Name "NonameCustomModule" -PSPath "IIS:\sites\"+$siteName+ "\" + $appName 
+                    if ($filteredModules.Count -gt 0)
+                    {
+                        Write-Host("Noname already found on application located at " + $appPath)
+                    } else{
+                    Write-Host ("No IIS module found on application: " + $appPath + "'`n")
                     C:\windows\system32\inetsrv\appcmd.exe set config $appPath -section:system.webServer/modules /+`"["name='NonameCustomModule',type='NonameApp.NonameCustomModule'"]  
                     
                     Write-Host ("Stopping site: '" + $siteName + "'`n")
@@ -153,6 +159,7 @@ function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInter
                     Write-Host ("Starting site: '" + $siteName + "'`n")
                     Start-WebSite -Name $siteName
                     Write-Host ("Restart '" + $siteName + "' done`n")
+                    }
                 }
 
             }
@@ -161,17 +168,6 @@ function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInter
             
         }
         
-        
-        #foreach ($site in $sites) #loop through IIS sites
-        # {
-            #     if ((-Not $siteName) -Or ($site.Name -eq $siteName))
-            #     {
-                #         Write-Host ("Processing IIS Site: '" + $site.Name + "'`n")
-                #         #Add-Noname-Module-Site($site) #adds the noname module to the site
-                #         $sm = Get-IISServerManager
-                #         $appPool = $sm.ApplicationPools['DefaultAppPool']
-                #     }
-                # }
             }
             catch [System.SystemException]
             {
