@@ -1,4 +1,18 @@
-param ($siteName,$nonInteractive,[Parameter(Mandatory=$false)][string[]]$Folders)
+param ($siteName,$nonInteractive,[Parameter(Mandatory=$false)][string[]]$Folders) 
+
+#ARGUMENTS ARE OPTIONAL allowing you to target specific folders to copy the DLL into AND/OR specific siteNames to apply Noname to the IIS config
+
+#./deploy.ps1 -siteName pass in an IIS site to target. #CAUTION if no user input for siteName this will add Noname to ALL of the IIS sites
+#./deploy.ps1 -Folders c:\test,c:\webroot\bin
+
+#EXAMPLES  .\deploy.ps1 -Folders c:\Default -siteName "Default Web Site"
+# or .\deploy.ps1 -siteName "Default Web Site" for a singles site IIS config change
+# or .\deploy.ps1 -Folders c:\Default for a singles folder DLL copy and ALL IIS sites config changes
+# or .\deploy.ps1 -Folders c:\Default for a single folder DLL copy with NO IIS site config changes
+
+#Comes with no warranties
+#Patrick Mcbrien
+#Noname
 
 function Install-Pre-requisites([string] $nonInteractive)
 {
@@ -40,7 +54,6 @@ function Install-Pre-requisites([string] $nonInteractive)
     }
 }
 
-
 function Copy-Noname-Module-To-Sites([array]$Folders)
 {
 
@@ -74,19 +87,17 @@ function Add-Noname-Module-Site($site)
 {
     $siteName = $site.Name
     Write-Host ("Adding noname module locally for site: "+$siteName+".`n")
-    $filteredModules = Get-WebManagedModule -PSPath "IIS:\sites\$siteName" | Where-Object Name -like "*Noname*"
-    # Check if the web-managed-modules contains Noname module for the 
+    $filteredModules = Get-WebManagedModule -PSPath "IIS:\sites\$siteName" | Where-Object Name -like "*Noname*" # Check if the web-managed-modules contains Noname module for the site
     if ($filteredModules.Count -gt 0)
     {
-        # The module is installed
+        # The Noname IIS module is installed
         Write-Host ($filteredModules.Name + " module is already installed on the site. Skipping Noname module installation on PSPath IIS:\sites\" + $siteName + "`n")
     }
     else
     {
-        # The module is not installed
+        # The Noname IIS module is not installed
         Write-Host ("Noname module is not installed, so let's install it on PSPath IIS:\sites\" +$siteName+"`n")
         New-WebManagedModule -Name "NonameCustomModule" -Type "NonameApp.NonameCustomModule" -PSPath "IIS:\sites\$siteName"
-
         Write-Host ("Stopping site: '" + $siteName + "'`n")
         Stop-WebSite -Name $siteName
         Write-Host ("Starting site: '" + $siteName + "'`n")
@@ -97,30 +108,26 @@ function Add-Noname-Module-Site($site)
 
 function Add-Noname-To-IIS-Sites($siteName,$nonInteractive,$Folders)
 {
-
     $ErrorActionPreference = "Stop"
     try
     {
-        # Check if siteName exist in IIS-sites list.
-        if ($siteName)
+        if ($siteName) # Check if siteName exists from user input
         {
-            $sites = Get-IISSite $siteName 
+            $sites = Get-IISSite $siteName #if a site is passed it will use a single site
         } else{
-            $sites = Get-ChildItem IIS:\Sites\
+            $sites = Get-ChildItem IIS:\Sites\ #CAUTION if no user input this will get ALL of the IIS sites
         }
-
+        
         Install-Pre-requisites $nonInteractive
         Write-Host "Prereqs met ...`n"   
-      
-        #First we copy DLL files to Folders
-        Copy-Noname-Module-To-Sites $Folders
+        Copy-Noname-Module-To-Sites $Folders    #First we copy blessed DLL files to Folders if they are passed in
 
-        foreach ($site in $sites)
+        foreach ($site in $sites) #loop through IIS sites
         {
             if ((-Not $siteName) -Or ($site.Name -eq $siteName))
             {
                 Write-Host ("Processing IIS Site: '" + $site.Name + "'`n")
-                Add-Noname-Module-Site($site)
+                Add-Noname-Module-Site($site) #adds the noname module to the site
                 
             }
         }
