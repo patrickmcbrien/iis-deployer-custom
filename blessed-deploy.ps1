@@ -16,45 +16,6 @@ param ([Parameter(Mandatory=$true)]$siteName,[Parameter(Mandatory=$true)]$appNam
 #Patrick Mcbrien
 #Noname
 
-function Install-Pre-requisites([string] $nonInteractive)
-{
-    # check pre-requisites are installed.
-    $requirements = "NET-Framework-45-Features", "Web-Net-Ext45", "Web-Asp-Net45", "Web-ISAPI-Ext", "Web-ISAPI-Filter"
-    $nonInstalledRequirements = New-Object Collections.Generic.List[String]
-    foreach ($item in $requirements)
-    {
-        $requirement = Get-WindowsFeature -Name $item | Where Installed
-        if (-Not$requirement)
-        {
-            $nonInstalledRequirements.Add($item)
-        }
-        else
-        {
-            Write-Host ($item + " already installed")
-        }
-    }
-    #  if one of the pre-requisites didn't install, ask ack from the user to install it.
-    if ($nonInstalledRequirements)
-    {
-        if ($nonInteractive -ne "y" -or $nonInteractive -ne "Y")
-        {
-            write-host ("The following requirements are not installed`n" + $nonInstalledRequirements + "`n" + "Do you want to install them? [y/n]")
-            $nonInteractive = Read-Host
-        }
-        if ($nonInteractive -eq "y" -or $nonInteractive -eq "Y")
-        {
-            foreach ($requirement in $nonInstalledRequirements)
-            {
-                Write-Host ("Installing " + $requirement + "`n")
-                Install-WindowsFeature -Name $requirement
-            }
-        }
-        else{
-            Write-Host ("The following requirements cannot be installed.. exiting`n " + $nonInstalledRequirements)
-            exit
-        }
-    }
-}
 
 function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInteractive)
 {
@@ -68,7 +29,7 @@ function Add-Noname-To-IIS-Applications($siteName,$appName,$folderName,$nonInter
             $sites = Get-ChildItem IIS:\Sites\ #CAUTION if no user input this will get ALL of the IIS sites
         }
         
-        Install-Pre-requisites $nonInteractive
+        #Install-Pre-requisites $nonInteractive
         Write-Host "Prereqs met ..."   
         Write-Host ("Copying the DLL into " + $folderName)
         
