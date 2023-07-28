@@ -177,7 +177,7 @@ function Add-Noname-Module($siteName,$autoApprove)
                     Write-Host -ForegroundColor Yellow "'$site' is Classic pipeline mode. we can't add Noname module.`n"
                     continue
                 }
-                
+
                 Add-Noname-Module-To-App $site.Name
 
                 # Capture the IIS Sites physical path & run the batch file for each
@@ -189,10 +189,7 @@ function Add-Noname-Module($siteName,$autoApprove)
                     Write-Host "Physical Path: " $physicalPath
                     $physicalPath = $physicalPath.replace("%SystemDrive%", "C:")
                     Write-Host -ForegroundColor Cyan "IIS Site Path: '$physicalPath'"
-                    
-                    
                     Copy-Noname-Module-To-Site $physicalPath #CAN ALSO BE AN APPLICATION UNDER THE SITE.
-                    
                 }
                 
                 Stop-WebSite -Name $site.Name
