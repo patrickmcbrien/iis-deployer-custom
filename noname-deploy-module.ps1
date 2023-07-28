@@ -172,7 +172,12 @@ function Add-Noname-Module($siteName,$autoApprove)
             if ((-Not $siteName) -Or ($site.Name -eq $siteName))
             {
                 Write-Host -ForegroundColor Cyan "IIS Site Name: '$site'"
-
+                if (! (Is-Integrated-Mode $site.Name))
+                {
+                    Write-Host -ForegroundColor Yellow "'$site' is Classic pipeline mode. we can't add Noname module.`n"
+                    continue
+                }
+                
                 Add-Noname-Module-To-App $site.Name
 
                 # Capture the IIS Sites physical path & run the batch file for each
@@ -184,11 +189,7 @@ function Add-Noname-Module($siteName,$autoApprove)
                     Write-Host "Physical Path: " $physicalPath
                     $physicalPath = $physicalPath.replace("%SystemDrive%", "C:")
                     Write-Host -ForegroundColor Cyan "IIS Site Path: '$physicalPath'"
-                    if (! (Is-Integrated-Mode $site.Name))
-                    {
-                        Write-Host -ForegroundColor Yellow "'$site' is Classic pipeline mode. we can't add Noname module.`n"
-                        continue
-                    }
+                    
                     
                     Copy-Noname-Module-To-Site $physicalPath #CAN ALSO BE AN APPLICATION UNDER THE SITE.
                     
