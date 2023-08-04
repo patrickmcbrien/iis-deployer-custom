@@ -9,9 +9,11 @@
 #ADD NONAME MODULE ONLY TO THE IIS APPLICATION AND SITE PASSED
 #Add-Noname-Module-Application -siteName "Dogfood" -appName "testapp" -autoApprove "y" 
 
-#REMOVE NONAME MODULE FROM ALL SITES
-
+#REMOVE NONAME MODULE FROM Site
 #Remove-Noname-Module-Site -siteName "Dogfood"
+
+#REMOVE NONAME MODULE ONLY TO THE IIS APPLICATION AND SITE PASSED
+#Remove-Noname-Module-Application -siteName "Dogfood" -appName "testapp" -autoApprove "y"
 
 function Verify-Site-Name($siteName)
 {
