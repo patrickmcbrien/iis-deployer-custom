@@ -1,3 +1,18 @@
+#USAGE
+#NOTE! FIRST IMPORT THE MODULE, THEN RUN COMMANDS
+
+#Import-Module .\noname-deploy-module.psm1 -Force
+
+#ADD NONAME MODULE TO ALL IIS APPLICATIONS/SITES
+#Add-Noname-Module-All-Sites -siteName "Dogfood" -autoApprove "y" 
+
+#ADD NONAME MODULE ONLY TO THE IIS APPLICATION AND SITE PASSED
+#Add-Noname-Module-Application -siteName "Dogfood" -appName "testapp" -autoApprove "y" 
+
+#REMOVE NONAME MODULE FROM ALL SITES
+
+#Remove-Noname-Module-All-Sites -siteName "Dogfood"
+
 function Verify-Site-Name($siteName)
 {
     # Check if siteName exist in Windows server.
@@ -21,6 +36,10 @@ function Verify-Site-Name($siteName)
         if (!$siteFound)
         { throw "[ERROR] IIS site name: '$siteName' does not exists in this server!`n" + $_ }
     }
+}
+
+function Verify-App-Name($siteName, $appName) {
+
 }
 
 function Install-Pre-requisites($autoApprove)
@@ -100,7 +119,7 @@ function Compile-Noname-Module
     & $frameworkPath /t:library /out:$assemblyName /o $modulePath /r:System.Web.dll
 }
 
-function Copy-Noname-Module-To-Site([string] $physicalPath)
+function Copy-Noname-Module-To-Bin([string] $physicalPath)
 {
     $binDir = Join-Path $physicalPath 'bin'
     if (!(Test-Path $binDir)) {
@@ -127,7 +146,9 @@ function Is-Integrated-Mode($siteName)
 }
 function Add-Noname-Module-To-App($siteName)
 {
+    Write-Host "Site Name for adding module to app $siteName"
     $module = Get-WebConfiguration -Filter "/system.webServer/modules/add" -PSPath "IIS:\Sites\$siteName" | Where-Object Name -eq 'NonameCustomModule'
+    
     if (!$module)
     {
         Add-WebConfiguration -Filter "/system.webServer/modules" -PSPath "IIS:\Sites\$siteName" -Value @{
@@ -154,7 +175,78 @@ function Remove-Noname-Module-From-App($siteName)
     }
 }
 
-function Add-Noname-Module($siteName,$autoApprove)
+function Add-Noname-Module-Application([string]$siteName, [string]$appName, $autoApprove)
+{
+    try
+    {
+        $ErrorActionPreference = "Stop"
+        Verify-Site-Name $siteName
+        Install-Pre-requisites $autoApprove
+
+        Create-Noname-Log
+        Compile-Noname-Module
+
+        #Write-Host "Got param appName: $appName"
+        #Write-Host "Got param siteName: $siteName"
+        
+        #$site = Get-Website $siteName | select-object "PhysicalPath" 
+        #$sitePhysicalPath = $site.physicalPath
+        #$sitePhysicalPath = $sitePhysicalPath.replace("%SystemDrive%", "C:")
+
+        if (! (Is-Integrated-Mode $siteName))
+        {
+            Write-Host -ForegroundColor Yellow "'$siteName' is Classic pipeline mode. we can't add Noname module.`n"
+            continue
+        }
+
+        # PowerShell  Checks If a File Exists
+        $WantFile = "C:\windows\system32\inetsrv\appcmd.exe"
+        $FileExists = Test-Path $WantFile
+        If ($FileExists -eq $True) {Write-Host "Found Appcmd.exe, proceeding"}
+        Else {Write-Host "No Appcmd at this location C:\windows\system32\inetsrv\ so exiting powershell noname installation script"}
+
+        #Add-Noname-Module-To-App $siteName
+        #Write-Host -ForegroundColor Cyan "IIS Site Path: '$sitePhysicalPath'"
+        #Copy-Noname-Module-To-Bin $sitePhysicalPath 
+
+        $apps = Get-WebApplication -Site $siteName -Name $appName
+        if (-Not $apps) {
+            Write-Host "Fatal Error: Application to found for site $siteName and application $appName"
+            break
+        }
+
+        foreach ($app in $apps) {
+
+            Write-Host "Physical Path of IIS application: " $app.physicalPath
+            $appPhysicalPath=$app.physicalPath.replace("%SystemDrive%", "C:")
+            Copy-Noname-Module-To-Bin $appPhysicalPath 
+            $appPathIIS = ($siteName + "/" + $appName).trim() #for example, "My Default Site/Cats"
+                    
+            $filteredModules = Get-WebManagedModule -Name "NonameCustomModule" -PSPath "IIS:\sites\$siteName\$appName"
+            if ($filteredModules.Count -gt 0)
+            {
+                Write-Host("Noname module already found on IIS application $appName")
+            } else{
+                Write-Host ("No IIS module found on application: " + $appName + "'`n")
+                C:\windows\system32\inetsrv\appcmd.exe set config $appPathIIS -section:system.webServer/modules /+`"["name='NonameCustomModule',type='NonameApp.NonameCustomModule'"]          
+                Write-Host ("Module installed on Noname IIS application $appName")
+            } 
+        }
+
+        Stop-WebSite -Name $siteName
+        Start-WebSite -Name $siteName
+        Write-Host -ForegroundColor Cyan "Restart '$siteName' completed successfully`n"
+        
+        Write-Host -ForegroundColor Green "Install Noname module completed successfully"
+    }
+    catch [System.SystemException]
+    {
+        $message = $_
+        Write-Error "[ERROR] An error occurred.`n $message"
+    }
+}
+
+function Add-Noname-Module-All-Sites($siteName,$autoApprove)
 {
     try
     {
@@ -210,7 +302,35 @@ function Add-Noname-Module($siteName,$autoApprove)
 }
 
 
-function Remove-Noname-Module($siteName)
+function Remove-Noname-Module-All-Sites($siteName)
+{
+    try
+    {
+        $ErrorActionPreference = "Stop"
+        Verify-Site-Name $siteName
+        # Loop through each IIS site and add Noname module.
+        $sites = Get-IISSite
+        foreach ($site in $sites)
+        {
+            if (! (Is-Integrated-Mode $site.Name))
+            {
+                Write-Host -ForegroundColor Yellow "'$site' is Classic pipeline mode. Skipping.`n"
+                continue
+            }
+            if ((-Not $siteName) -Or ($site.Name -eq $siteName))
+            {
+                Remove-Noname-Module-From-App $site.Name
+            }
+        }
+        Write-Host -ForegroundColor Green "Remove Noname module completed successfully"
+    }
+    catch [System.SystemException]
+    {
+        $message = $_
+        Write-Error "[ERROR] An error occurred.`n $message"
+    }
+}
+function Remove-Noname-Module-Application($siteName)
 {
     try
     {
@@ -239,5 +359,9 @@ function Remove-Noname-Module($siteName)
     }
 }
 Import-Module WebAdministration
-Export-ModuleMember -Function Add-Noname-Module
-Export-ModuleMember -Function Remove-Noname-Module
+Export-ModuleMember -Function Add-Noname-Module-Application
+Export-ModuleMember -Function Add-Noname-Module-All-Sites
+Export-ModuleMember -Function Remove-Noname-Module-Application
+Export-ModuleMember -Function Remove-Noname-Module-All-Sites
+
+
