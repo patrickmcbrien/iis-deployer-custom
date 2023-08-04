@@ -1,4 +1,4 @@
- #USAGE
+#USAGE
 #NOTE! FIRST IMPORT THE MODULE, THEN RUN COMMANDS
 
 #Import-Module .\noname-deploy-module.psm1 -Force
@@ -190,7 +190,7 @@ function Add-Noname-Module-Application([string]$siteName, [string]$appName, $aut
 
         $apps = Get-WebApplication -Site $siteName -Name $appName
         if (-Not $apps) {
-            Write-Host "Fatal Error: Application to found for site $siteName and application $appName"
+            Write-Host "Fatal Error: Application was not found for site $siteName and application $appName"
             break
         }
 
@@ -340,4 +340,3 @@ Export-ModuleMember -Function Remove-Noname-Module-Site
 Export-ModuleMember -Function Verify-Noname-Installation-Site
 
 
- 
