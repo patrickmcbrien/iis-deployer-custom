@@ -4,14 +4,14 @@
 #Import-Module .\noname-deploy-module.psm1 -Force
 
 #ADD NONAME MODULE TO ALL IIS APPLICATIONS/SITES
-#Add-Noname-Module-All-Sites -siteName "Dogfood" -autoApprove "y" 
+#Add-Noname-Module-Site -siteName "Dogfood" -autoApprove "y" 
 
 #ADD NONAME MODULE ONLY TO THE IIS APPLICATION AND SITE PASSED
 #Add-Noname-Module-Application -siteName "Dogfood" -appName "testapp" -autoApprove "y" 
 
 #REMOVE NONAME MODULE FROM ALL SITES
 
-#Remove-Noname-Module-All-Sites -siteName "Dogfood"
+#Remove-Noname-Module-Site -siteName "Dogfood"
 
 function Verify-Site-Name($siteName)
 {
@@ -184,14 +184,7 @@ function Add-Noname-Module-Application([string]$siteName, [string]$appName, $aut
         Install-Pre-requisites $autoApprove
 
         Create-Noname-Log
-        Compile-Noname-Module
-
-        #Write-Host "Got param appName: $appName"
-        #Write-Host "Got param siteName: $siteName"
-        
-        #$site = Get-Website $siteName | select-object "PhysicalPath" 
-        #$sitePhysicalPath = $site.physicalPath
-        #$sitePhysicalPath = $sitePhysicalPath.replace("%SystemDrive%", "C:")
+        Compile-Noname-Module #compile the module from C# to create the DLL file
 
         if (! (Is-Integrated-Mode $siteName))
         {
@@ -199,15 +192,14 @@ function Add-Noname-Module-Application([string]$siteName, [string]$appName, $aut
             continue
         }
 
-        # PowerShell  Checks If a File Exists
-        $WantFile = "C:\windows\system32\inetsrv\appcmd.exe"
+        # PowerShell  Check to make sure we have appcmd installed
+        $WantFile =  "system32\inetsrv\appcmd.exe"
         $FileExists = Test-Path $WantFile
         If ($FileExists -eq $True) {Write-Host "Found Appcmd.exe, proceeding"}
-        Else {Write-Host "No Appcmd at this location C:\windows\system32\inetsrv\ so exiting powershell noname installation script"}
-
-        #Add-Noname-Module-To-App $siteName
-        #Write-Host -ForegroundColor Cyan "IIS Site Path: '$sitePhysicalPath'"
-        #Copy-Noname-Module-To-Bin $sitePhysicalPath 
+        Else {
+            Write-Host "Fatal Error: Please install AppCmd.exe. This is a requirement for Noname. No Appcmd at this location "$Env:windir"system32\inetsrv\ so exiting powershell noname installation script"
+            break
+        }
 
         $apps = Get-WebApplication -Site $siteName -Name $appName
         if (-Not $apps) {
@@ -226,17 +218,18 @@ function Add-Noname-Module-Application([string]$siteName, [string]$appName, $aut
             if ($filteredModules.Count -gt 0)
             {
                 Write-Host("Noname module already found on IIS application $appName")
+                Write-Host("Exiting")
+                break
             } else{
                 Write-Host ("No IIS module found on application: " + $appName + "'`n")
-                C:\windows\system32\inetsrv\appcmd.exe set config $appPathIIS -section:system.webServer/modules /+`"["name='NonameCustomModule',type='NonameApp.NonameCustomModule'"]          
-                Write-Host ("Module installed on Noname IIS application $appName")
+                $Env:windir"system32\inetsrv\appcmd.exe" set config $appPathIIS -section:system.webServer/modules /+`"["name='NonameCustomModule',type='NonameApp.NonameCustomModule'"]          
+                Write-Host ("Module installed locally on Noname IIS application $appName")
             } 
         }
 
         Stop-WebSite -Name $siteName
         Start-WebSite -Name $siteName
         Write-Host -ForegroundColor Cyan "Restart '$siteName' completed successfully`n"
-        
         Write-Host -ForegroundColor Green "Install Noname module completed successfully"
     }
     catch [System.SystemException]
@@ -246,7 +239,7 @@ function Add-Noname-Module-Application([string]$siteName, [string]$appName, $aut
     }
 }
 
-function Add-Noname-Module-All-Sites($siteName,$autoApprove)
+function Add-Noname-Module-Site($siteName,$autoApprove)
 {
     try
     {
@@ -302,7 +295,7 @@ function Add-Noname-Module-All-Sites($siteName,$autoApprove)
 }
 
 
-function Remove-Noname-Module-All-Sites($siteName)
+function Remove-Noname-Module-Site($siteName)
 {
     try
     {
@@ -358,10 +351,18 @@ function Remove-Noname-Module-Application($siteName)
         Write-Error "[ERROR] An error occurred.`n $message"
     }
 }
+
+function Verify-Noname-Installation-Site($siteName) {
+
+}
+function Verify-Noname-Installation-App($siteName) {
+
+}
 Import-Module WebAdministration
 Export-ModuleMember -Function Add-Noname-Module-Application
-Export-ModuleMember -Function Add-Noname-Module-All-Sites
+Export-ModuleMember -Function Add-Noname-Module-Site
 Export-ModuleMember -Function Remove-Noname-Module-Application
-Export-ModuleMember -Function Remove-Noname-Module-All-Sites
+Export-ModuleMember -Function Remove-Noname-Module-Site
+Export-ModuleMember -Function Verify-Noname-Installation-Site
 
 
