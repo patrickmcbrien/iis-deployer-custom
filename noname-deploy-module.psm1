@@ -1,4 +1,4 @@
-#USAGE
+ #USAGE
 #NOTE! FIRST IMPORT THE MODULE, THEN RUN COMMANDS
 
 #Import-Module .\noname-deploy-module.psm1 -Force
@@ -162,19 +162,6 @@ function Add-Noname-Module-To-App($siteName)
     }
 }
 
-function Remove-Noname-Module-From-App($siteName)
-{
-    $module = Get-WebConfiguration -Filter "/system.webServer/modules/add" -PSPath "IIS:\Sites\$siteName" | Where-Object Name -eq 'NonameCustomModule'
-    if ($module)
-    {
-        Remove-WebManagedModule -Name "NonameCustomModule" -PSPath "IIS:\Sites\$siteName"
-        Write-Host -ForegroundColor Cyan "NonameCustomModule module removed from '$siteName' site.`n"
-    }
-    else {
-        Write-Host -ForegroundColor Yellow "NonameCustomModule does not exists in '$siteName' site.`n"
-    }
-}
-
 function Add-Noname-Module-Application([string]$siteName, [string]$appName, $autoApprove)
 {
     try
@@ -193,7 +180,7 @@ function Add-Noname-Module-Application([string]$siteName, [string]$appName, $aut
         }
 
         # PowerShell  Check to make sure we have appcmd installed
-        $WantFile =  "system32\inetsrv\appcmd.exe"
+        $WantFile =  "c:\windows\system32\inetsrv\appcmd.exe"
         $FileExists = Test-Path $WantFile
         If ($FileExists -eq $True) {Write-Host "Found Appcmd.exe, proceeding"}
         Else {
@@ -222,7 +209,7 @@ function Add-Noname-Module-Application([string]$siteName, [string]$appName, $aut
                 break
             } else{
                 Write-Host ("No IIS module found on application: " + $appName + "'`n")
-                $Env:windir"system32\inetsrv\appcmd.exe" set config $appPathIIS -section:system.webServer/modules /+`"["name='NonameCustomModule',type='NonameApp.NonameCustomModule'"]          
+                c:\system32\inetsrv\appcmd.exe set config $appPathIIS -section:system.webServer/modules /+`"["name='NonameCustomModule',type='NonameApp.NonameCustomModule'"]          
                 Write-Host ("Module installed locally on Noname IIS application $appName")
             } 
         }
@@ -294,7 +281,6 @@ function Add-Noname-Module-Site($siteName,$autoApprove)
     }
 }
 
-
 function Remove-Noname-Module-Site($siteName)
 {
     try
@@ -323,26 +309,14 @@ function Remove-Noname-Module-Site($siteName)
         Write-Error "[ERROR] An error occurred.`n $message"
     }
 }
-function Remove-Noname-Module-Application($siteName)
+function Remove-Noname-Module-Application($siteName,$appName)
 {
     try
     {
         $ErrorActionPreference = "Stop"
         Verify-Site-Name $siteName
         # Loop through each IIS site and add Noname module.
-        $sites = Get-IISSite
-        foreach ($site in $sites)
-        {
-            if (! (Is-Integrated-Mode $site.Name))
-            {
-                Write-Host -ForegroundColor Yellow "'$site' is Classic pipeline mode. Skipping.`n"
-                continue
-            }
-            if ((-Not $siteName) -Or ($site.Name -eq $siteName))
-            {
-                Remove-Noname-Module-From-App $site.Name
-            }
-        }
+        Remove-WebManagedModule -Name "NonameCustomModule" -PSPath "IIS:\sites\$siteName\$appName"
         Write-Host -ForegroundColor Green "Remove Noname module completed successfully"
     }
     catch [System.SystemException]
@@ -366,3 +340,4 @@ Export-ModuleMember -Function Remove-Noname-Module-Site
 Export-ModuleMember -Function Verify-Noname-Installation-Site
 
 
+ 
